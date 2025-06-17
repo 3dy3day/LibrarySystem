@@ -9,12 +9,9 @@ export const useBookStore = defineStore('book', {
     async findByIsbn(isbn: string) {
       if (this.cache.has(isbn)) return this.cache.get(isbn);
 
-      const { data } = await api.get('/books', { params: { q: isbn } });
-      const hit = data.find(
-        (b: any) => b.isbn10 === isbn || b.isbn13 === isbn
-      );
-      if (hit) this.cache.set(isbn, hit);
-      return hit;
+      const { data } = await api.get(`/books/isbn/${isbn}`);
+      this.cache.set(isbn, data);
+      return data;
     },
 
     async register(book: any) {
