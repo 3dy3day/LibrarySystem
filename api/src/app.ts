@@ -1,12 +1,29 @@
-// src/app.ts
 import express from 'express';
-import { basicAuth } from './middlewares/basicAuth.js';      // ← .js がポイント
-import { healthRouter } from './controllers/health.controller.js';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { basicAuth } from './middlewares/basicAuth';
+import { healthRouter } from './controllers/health.controller';
+import { usersRouter } from './routes/users.router';
+import { booksRouter } from './routes/books.router';
+import { loansRouter } from './routes/loans.router';
 
 export function createApp() {
   const app = express();
+
+  app.use(cors());
+  app.use(helmet());
+  app.use(morgan('dev'));
   app.use(express.json());
-  app.use(basicAuth);         // 全ルートに Basic 認証
+
+  app.use(basicAuth);
   app.use(healthRouter);
+
+  app.use('/users', usersRouter);
+  app.use('/books', booksRouter);
+  app.use('/loans', loansRouter);
+
   return app;
 }
+
+export default createApp;

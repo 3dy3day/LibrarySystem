@@ -27,7 +27,7 @@ model Book {
   status      BookStatus @default(AVAILABLE)
   comment     String?
   thumbnail   String?
-  ownerId     String?   // optional for今
+  ownerId     String?
   createdAt   DateTime  @default(now())
 
   loans       Loan[]

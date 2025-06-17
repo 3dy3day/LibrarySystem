@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/stores/auth';
 
 export const api = axios.create({
-  baseURL: 'http://localhost:3000',   // ← env に後で寄せても OK
+  baseURL: 'http://localhost:3000',   // TODO: move to env config
   timeout: 8_000
 });
 

@@ -1,13 +1,13 @@
 import { prisma, BookStatus } from '../lib/prisma';
 
 export const BookService = {
-  list: (q?: string) =>
+  list: (q?: string, status?: string, author?: string) =>
     prisma.book.findMany({
-        where: q
-          ? ({
-              title: { contains: q }   // ← mode を取る。SQLite は大小区別
-            }) /* as Prisma.BookWhereInput */ // キャスト不要なら消してOK
-          : undefined
+        where: {
+          ...(q && { title: { contains: q } }),
+          ...(status && { status: status as BookStatus }),
+          ...(author && { author: { contains: author } })
+        }
     }),
   get: (id: string) => prisma.book.findUnique({ where: { id } }),
   create: (data: any) => prisma.book.create({ data }),

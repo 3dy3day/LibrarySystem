@@ -13,13 +13,13 @@ import { loansRouter } from './routes/loans.router';
 
 const app = express();
 
-/* ミドルウェア */
+
 app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
-/* 認証 & ルーティング */
+
 app.use(basicAuth);
 app.use(healthRouter);
 
@@ -27,11 +27,11 @@ app.use('/users', usersRouter);
 app.use('/books', booksRouter);
 app.use('/loans', loansRouter);
 
-/* 起動 */
+
 const port = Number(env.PORT);
 app.listen(port, () => {
   /* eslint-disable-next-line no-console */
   console.log(`Listening: http://localhost:${port}`);
 });
 
-export { app };  // Supertest/E2E テスト用
+export { app };
