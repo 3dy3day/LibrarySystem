@@ -14,6 +14,8 @@ model User {
   createdAt DateTime @default(now())
 
   loans     Loan[]
+
+  @@index([name])
 }
 
 model Book {
@@ -31,6 +33,11 @@ model Book {
   createdAt   DateTime  @default(now())
 
   loans       Loan[]
+
+  @@index([title])
+  @@index([author])
+  @@index([status])
+  @@index([title, author])
 }
 
 model Loan {
@@ -42,6 +49,13 @@ model Loan {
   lentAt     DateTime @default(now())
   dueAt      DateTime
   returnedAt DateTime?
+
+  @@index([bookId])
+  @@index([borrowerId])
+  @@index([lentAt])
+  @@index([dueAt])
+  @@index([returnedAt])
+  @@index([dueAt, returnedAt])
 }
 
 enum BookStatus {
