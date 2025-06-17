@@ -23,14 +23,7 @@ let reader: BrowserMultiFormatReader;
 async function handleIsbn(code: string) {
   try {
     status.value = '🔍 Searching...';
-    let book = await bookStore.findByIsbn(code);
-
-    if (!book) {
-
-      if (!book.author) book.author = 'Unknown';
-      book = await bookStore.register({ title: 'Unknown', isbn13: code });
-    }
-
+    const book = await bookStore.findByIsbn(code);
     await router.push(`/books/${book.id}`);
   } catch (e) {
     console.error(e);
