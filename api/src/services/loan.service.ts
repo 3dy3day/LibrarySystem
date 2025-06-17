@@ -1,7 +1,7 @@
 import { prisma, BookStatus } from '../lib/prisma';
 
 export const LoanService = {
-  // 貸出
+
   async lend(bookId: string, borrowerId: string, days = 14) {
     return prisma.$transaction(async (tx) => {
       const book = await tx.book.findUnique({ where: { id: bookId } });
@@ -20,7 +20,7 @@ export const LoanService = {
     });
   },
 
-  // 返却
+
   async returnLoan(loanId: string) {
     return prisma.$transaction(async (tx) => {
       const loan = await tx.loan.update({
@@ -35,7 +35,18 @@ export const LoanService = {
     });
   },
 
-  list: () => prisma.loan.findMany({ include: { book: true, borrower: true } }),
+  list: (bookId?: string, borrowerId?: string, overdue?: boolean) =>
+    prisma.loan.findMany({
+      where: {
+        ...(bookId && { bookId }),
+        ...(borrowerId && { borrowerId }),
+        ...(overdue && { 
+          dueAt: { lt: new Date() },
+          returnedAt: null 
+        })
+      },
+      include: { book: true, borrower: true }
+    }),
   get: (id: string) =>
     prisma.loan.findUnique({ where: { id }, include: { book: true, borrower: true } })
 };

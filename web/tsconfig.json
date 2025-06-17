@@ -1,11 +1,18 @@
 {
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
-    "moduleResolution": "node",
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
     "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }
   },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
   "exclude": ["node_modules", "dist"]
 }

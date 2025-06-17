@@ -3,8 +3,8 @@ import { env } from '../env';
 import bcrypt from 'bcrypt';
 
 /**
- * 超シンプル Basic 認証
- * TODO: env にパスワードハッシュを置き、bcrypt.compare へ差し替える
+ * Simple Basic authentication
+ * TODO: Store password hash in env and switch to bcrypt.compare
  */
 export async function basicAuth(
   req: Request,
@@ -18,7 +18,6 @@ export async function basicAuth(
   const [user, pass] = Buffer.from(encoded, 'base64').toString().split(':');
 
   const ok = user === env.BASIC_USER && pass === env.BASIC_PASS;
-  // ハッシュ運用に切り替えるなら:
   // const ok = user === env.BASIC_USER && await bcrypt.compare(pass, env.BASIC_HASH);
 
   if (!ok) return unauthorized(res);

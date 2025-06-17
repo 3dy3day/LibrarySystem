@@ -15,9 +15,9 @@ export default defineConfig({
     },
   },
   server: {
-    host: true,      // 0.0.0.0 でバインド
-    port: 5173,      // お好みで
-    strictPort: true, // ポート固定
+    host: true,
+    port: 5173,
+    strictPort: true,
     https: {
       key:  './192.168.0.21+1-key.pem',
       cert: './192.168.0.21+1.pem'

@@ -1,6 +1,6 @@
 // src/stores/book.ts
 import { defineStore } from 'pinia';
-import { api } from '@/lib/api';           // ← 修正：lib から api を import
+import { api } from '@/lib/api';
 
 export const useBookStore = defineStore('book', {
   state: () => ({ cache: new Map<string, any>() }),
