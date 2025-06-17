@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { BrowserQRCodeReader, BrowserCodeReader } from '@zxing/browser';
+import { BrowserMultiFormatReader, BrowserCodeReader } from '@zxing/browser';
 import {
+  BarcodeFormat,
+  DecodeHintType,
   Result,
   Exception
 } from '@zxing/library';
@@ -16,7 +18,7 @@ const manualInput = ref('');
 
 const bookStore = useBookStore();
 const router = useRouter();
-let reader: BrowserQRCodeReader;
+let reader: BrowserMultiFormatReader;
 
 
 async function handleIsbn(code: string) {
@@ -49,7 +51,12 @@ onMounted(async () => {
     
     console.log(`Starting camera with device ID: ${selectedDeviceId}`);
     
-    const codeReader = new BrowserQRCodeReader();
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.CODE_128]);
+    
+    const codeReader = new BrowserMultiFormatReader(hints, {
+      delayBetweenScanAttempts: 500
+    });
     reader = codeReader;
 
     const previewElem = document.getElementById('video') as HTMLVideoElement;
