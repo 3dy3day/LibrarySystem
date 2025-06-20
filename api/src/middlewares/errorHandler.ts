@@ -36,6 +36,20 @@ export function errorHandler(
     });
   }
 
+  if (error.message.includes('Cannot delete book with active loans')) {
+    return res.status(409).json({
+      error: 'Cannot delete book',
+      message: error.message
+    });
+  }
+
+  if (error.message.includes('Book not found')) {
+    return res.status(404).json({
+      error: 'Book not found',
+      message: error.message
+    });
+  }
+
   return res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'

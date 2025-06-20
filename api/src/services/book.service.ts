@@ -20,7 +20,34 @@ export const BookService = {
   create: (data: any) => prisma.book.create({ data }),
   update: (id: string, data: any) =>
     prisma.book.update({ where: { id }, data }),
-  remove: (id: string) => prisma.book.delete({ where: { id } }),
+  remove: async (id: string) => {
+    // Check if book has any loans
+    const bookWithLoans = await prisma.book.findUnique({
+      where: { id },
+      include: { loans: true }
+    });
+
+    if (!bookWithLoans) {
+      throw new Error('Book not found');
+    }
+
+    // Check if book has any active loans (not returned)
+    const activeLoans = bookWithLoans.loans.filter(loan => !loan.returnedAt);
+    
+    if (activeLoans.length > 0) {
+      throw new Error('Cannot delete book with active loans. Please return the book first.');
+    }
+
+    // If book has historical loans (returned), delete them first
+    if (bookWithLoans.loans.length > 0) {
+      await prisma.loan.deleteMany({
+        where: { bookId: id }
+      });
+    }
+
+    // Now delete the book
+    return prisma.book.delete({ where: { id } });
+  },
   setStatus: (id: string, status: BookStatus) =>
     prisma.book.update({ where: { id }, data: { status } }),
   
@@ -49,5 +76,36 @@ export const BookService = {
         isbn13: isbn
       }
     });
+  },
+
+  async getBookInfoByIsbn(isbn: string) {
+    // First check if book already exists in database
+    const existingBook = await prisma.book.findFirst({
+      where: {
+        OR: [
+          { isbn10: isbn },
+          { isbn13: isbn }
+        ]
+      }
+    });
+    
+    if (existingBook) {
+      return { ...existingBook, exists: true };
+    }
+    
+    // If not in database, fetch from Google Books API
+    const googleBookData = await GoogleBooksService.fetchByIsbn(isbn);
+    
+    if (googleBookData) {
+      return { ...googleBookData, exists: false };
+    }
+    
+    // Return minimal data if not found
+    return {
+      title: 'Unknown',
+      author: 'Unknown',
+      isbn13: isbn,
+      exists: false
+    };
   }
 };

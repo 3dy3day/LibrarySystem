@@ -49,4 +49,10 @@ booksRouter
       const book = await BookService.findOrCreateByIsbn(req.params.isbn);
       res.json(book);
     } catch (e) { next(e); }
+  })
+  .get('/isbn/:isbn/info', async (req, res, next) => {
+    try {
+      const book = await BookService.getBookInfoByIsbn(req.params.isbn);
+      res.json(book);
+    } catch (e) { next(e); }
   });

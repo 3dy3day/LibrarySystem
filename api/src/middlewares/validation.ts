@@ -4,10 +4,12 @@ import { z, ZodSchema } from 'zod';
 export function validateBody(schema: ZodSchema) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
+      console.log('Validating request body:', JSON.stringify(req.body, null, 2));
       req.body = schema.parse(req.body);
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.log('Validation failed:', error.errors);
         return res.status(400).json({
           error: 'Validation failed',
           details: error.errors

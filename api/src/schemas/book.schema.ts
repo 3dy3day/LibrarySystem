@@ -4,11 +4,20 @@ import { BookStatus } from '@prisma/client';
 const baseBookSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   author: z.string().min(1, 'Author is required'),
-  isbn10: z.string().optional(),
-  isbn13: z.string().optional(),
-  comment: z.string().optional(),
-  thumbnail: z.string().url().optional(),
-  ownerId: z.string().optional()
+  publisher: z.string().optional().nullable().or(z.literal('').transform(() => null)),
+  publishedAt: z.union([
+    z.string().datetime(),
+    z.date(),
+    z.literal('').transform(() => null),
+    z.null(),
+    z.undefined()
+  ]).optional().nullable(),
+  isbn10: z.string().optional().nullable().or(z.literal('').transform(() => null)),
+  isbn13: z.string().optional().nullable().or(z.literal('').transform(() => null)),
+  comment: z.string().optional().nullable().or(z.literal('').transform(() => null)),
+  description: z.string().optional().nullable().or(z.literal('').transform(() => null)),
+  thumbnail: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  ownerId: z.string().optional().nullable().or(z.literal('').transform(() => null))
 });
 
 export const createBookSchema = baseBookSchema.refine(data => data.isbn10 || data.isbn13, {

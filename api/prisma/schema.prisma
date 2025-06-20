@@ -28,6 +28,7 @@ model Book {
   isbn13      String?  @unique
   status      BookStatus @default(AVAILABLE)
   comment     String?
+  description String?
   thumbnail   String?
   ownerId     String?
   createdAt   DateTime  @default(now())

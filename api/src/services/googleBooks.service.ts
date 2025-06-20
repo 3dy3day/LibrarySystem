@@ -46,6 +46,7 @@ export const GoogleBooksService = {
           publishedAt: volumeInfo.publishedDate ? new Date(volumeInfo.publishedDate) : undefined,
           isbn10: isbn10 || undefined,
           isbn13: isbn13 || isbn,
+          description: volumeInfo.description,
           thumbnail: volumeInfo.imageLinks?.thumbnail
         };
       }

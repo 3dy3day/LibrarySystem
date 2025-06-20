@@ -17,10 +17,6 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    strictPort: true,
-    https: {
-      key:  './192.168.0.21+1-key.pem',
-      cert: './192.168.0.21+1.pem'
-    }
+    strictPort: true
   }
 });
