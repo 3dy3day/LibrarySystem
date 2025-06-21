@@ -1,12 +1,20 @@
 import { prisma, BookStatus } from '../lib/prisma';
+import { UserService } from './user.service';
 
 export const LoanService = {
 
   async lend(bookId: string, borrowerId: string, days = 14) {
     return prisma.$transaction(async (tx) => {
+      // Check if book is available
       const book = await tx.book.findUnique({ where: { id: bookId } });
       if (!book || book.status !== BookStatus.AVAILABLE)
         throw new Error('Book not available');
+
+      // Check if user can borrow more books based on their tier
+      const borrowLimit = await UserService.canBorrow(borrowerId);
+      if (!borrowLimit.canBorrow) {
+        throw new Error(`Cannot borrow more books. Current loans: ${borrowLimit.currentLoans}/${borrowLimit.maxLoans}`);
+      }
 
       const dueAt = new Date(Date.now() + days * 86400_000);
       const loan = await tx.loan.create({

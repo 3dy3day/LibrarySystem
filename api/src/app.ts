@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { basicAuth } from './middlewares/basicAuth';
+import { errorHandler } from './middlewares/errorHandler';
 import { healthRouter } from './controllers/health.controller';
 import { usersRouter } from './routes/users.router';
 import { booksRouter } from './routes/books.router';
@@ -22,6 +23,9 @@ export function createApp() {
   app.use('/users', usersRouter);
   app.use('/books', booksRouter);
   app.use('/loans', loansRouter);
+
+  // Error handler must be last
+  app.use(errorHandler);
 
   return app;
 }

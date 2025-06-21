@@ -29,7 +29,8 @@ export const updateBookSchema = baseBookSchema.partial();
 export const bookQuerySchema = z.object({
   q: z.string().optional(),
   status: z.nativeEnum(BookStatus).optional(),
-  author: z.string().optional()
+  author: z.string().optional(),
+  ownerId: z.string().uuid().optional()
 });
 
 export const bookParamsSchema = z.object({

@@ -169,9 +169,9 @@
                 <div class="flex items-center justify-between">
                   <span 
                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                    :class="book.available !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                    :class="book.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
                   >
-                    {{ book.available !== false ? 'Available' : 'Borrowed' }}
+                    {{ book.status === 'AVAILABLE' ? 'Available' : 'Borrowed' }}
                   </span>
                   
                   <!-- ISBN -->
@@ -199,19 +199,28 @@
                 </button>
                 <div class="flex space-x-2">
                   <button
-                    v-if="book.available !== false"
+                    v-if="book.status === 'AVAILABLE'"
                     @click.stop="borrowBook(book)"
                     class="text-green-600 hover:text-green-800 text-sm font-medium"
                   >
                     Borrow
                   </button>
-                  <button
-                    v-else
-                    @click.stop="returnBook(book)"
-                    class="text-orange-600 hover:text-orange-800 text-sm font-medium"
-                  >
-                    Return
-                  </button>
+                  <div v-else class="text-xs text-gray-600">
+                    <div v-if="book.loans && book.loans.length > 0">
+                      <p class="font-medium">Due: {{ formatDate(book.loans[0].dueAt) }}</p>
+                      <p>Borrowed by: {{ book.loans[0].borrower?.name || 'Unknown' }}</p>
+                      <button
+                        v-if="canUserReturn(book)"
+                        @click.stop="returnBook(book)"
+                        class="mt-1 text-orange-600 hover:text-orange-800 text-sm font-medium"
+                      >
+                        Return
+                      </button>
+                    </div>
+                    <div v-else>
+                      <p>Currently borrowed</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -242,6 +251,85 @@
         </div>
       </div>
     </div>
+
+    <!-- Borrow Confirmation Modal -->
+    <div v-if="showBorrowModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Confirm Book Borrowing</h3>
+            <button @click="cancelBorrow" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Book Info -->
+          <div v-if="selectedBook" class="mb-4 p-3 bg-gray-50 rounded-lg">
+            <h4 class="font-medium text-gray-900">{{ selectedBook.title }}</h4>
+            <p class="text-sm text-gray-600">by {{ selectedBook.author }}</p>
+          </div>
+
+          <!-- User Info -->
+          <div v-if="borrowingUser" class="mb-4">
+            <h4 class="font-medium text-gray-900 mb-2">Borrower Information</h4>
+            <div class="space-y-1 text-sm">
+              <p><span class="font-medium">Name:</span> {{ borrowingUser.name }}</p>
+              <p><span class="font-medium">Email:</span> {{ borrowingUser.email }}</p>
+              <p><span class="font-medium">Tier:</span> {{ borrowingUser.tier }}</p>
+              <div v-if="borrowingUser.borrowingInfo" class="mt-2 p-2 bg-blue-50 rounded">
+                <p class="text-blue-800">
+                  <span class="font-medium">Current Loans:</span> 
+                  {{ borrowingUser.borrowingInfo.currentLoans }}
+                  <span v-if="borrowingUser.borrowingInfo.maxLoans !== -1">
+                    / {{ borrowingUser.borrowingInfo.maxLoans }}
+                  </span>
+                  <span v-else> (Unlimited)</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Borrowing Period -->
+          <div class="mb-4">
+            <label for="borrowDays" class="block text-sm font-medium text-gray-700 mb-2">
+              Borrowing Period (days)
+            </label>
+            <select
+              id="borrowDays"
+              v-model="borrowDays"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="7">1 week</option>
+              <option value="14">2 weeks</option>
+            </select>
+            <p class="mt-1 text-sm text-gray-600">
+              Due date: {{ getDueDate() }}
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex justify-end space-x-3">
+            <button
+              @click="cancelBorrow"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            >
+              Cancel
+            </button>
+            <button
+              @click="confirmBorrow"
+              :disabled="isProcessingBorrow"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="isProcessingBorrow">Processing...</span>
+              <span v-else>Confirm Borrow</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -249,8 +337,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 // State
 const books = ref<any[]>([])
@@ -261,6 +351,13 @@ const statusFilter = ref('')
 const sortBy = ref('title')
 const currentPage = ref(1)
 const itemsPerPage = 12
+
+// Borrow confirmation modal state
+const showBorrowModal = ref(false)
+const selectedBook = ref<any>(null)
+const borrowingUser = ref<any>(null)
+const borrowDays = ref(14)
+const isProcessingBorrow = ref(false)
 
 // Computed
 const filteredBooks = computed(() => {
@@ -280,9 +377,9 @@ const filteredBooks = computed(() => {
   // Apply status filter
   if (statusFilter.value) {
     if (statusFilter.value === 'available') {
-      filtered = filtered.filter(book => book.available !== false)
+      filtered = filtered.filter(book => book.status === 'AVAILABLE')
     } else if (statusFilter.value === 'borrowed') {
-      filtered = filtered.filter(book => book.available === false)
+      filtered = filtered.filter(book => book.status === 'LENT')
     }
   }
 
@@ -382,31 +479,115 @@ const viewBook = (book: any) => {
 }
 
 const borrowBook = async (book: any) => {
+  selectedBook.value = book
+  
+  // Use admin user ID for demo (since auth store doesn't have current user)
+  const currentUserId = '97e44342-8611-42f7-8354-82e16a669fb8' // Admin user ID
+  
+  // Get current user info and borrowing limits
   try {
-    // In a real app, this would create a loan record
-    await api.post('/loans', {
-      bookId: book.id,
-      userId: 1, // Mock user ID
-      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 2 weeks from now
-    })
-    book.available = false
-  } catch (err) {
-    console.error('Failed to borrow book:', err)
-    // For demo purposes, just update the local state
-    book.available = false
+    const userResponse = await api.get(`/users/${currentUserId}`)
+    borrowingUser.value = userResponse.data
+    
+    // Check borrowing limits
+    const canBorrowResponse = await api.get(`/users/${currentUserId}/borrow-status`)
+    borrowingUser.value.borrowingInfo = canBorrowResponse.data
+    
+    showBorrowModal.value = true
+  } catch (err: any) {
+    console.error('Failed to get user info:', err)
+    alert('Failed to get user information. Please try again.')
   }
+}
+
+const confirmBorrow = async () => {
+  if (!selectedBook.value || !borrowingUser.value) return
+  
+  try {
+    isProcessingBorrow.value = true
+    
+    await api.post('/loans', {
+      bookId: selectedBook.value.id,
+      borrowerId: borrowingUser.value.id,
+      days: borrowDays.value
+    })
+    
+    // Update book status in local state
+    const bookIndex = books.value.findIndex(b => b.id === selectedBook.value.id)
+    if (bookIndex !== -1) {
+      books.value[bookIndex].status = 'LENT'
+      books.value[bookIndex].available = false
+    }
+    
+    showBorrowModal.value = false
+    selectedBook.value = null
+    borrowingUser.value = null
+    
+    alert('Book borrowed successfully!')
+  } catch (err: any) {
+    console.error('Failed to borrow book:', err)
+    const errorMessage = err.response?.data?.message || 'Failed to borrow book. Please try again.'
+    alert(errorMessage)
+  } finally {
+    isProcessingBorrow.value = false
+  }
+}
+
+const cancelBorrow = () => {
+  showBorrowModal.value = false
+  selectedBook.value = null
+  borrowingUser.value = null
+  borrowDays.value = 14
+}
+
+const getDueDate = () => {
+  const dueDate = new Date()
+  dueDate.setDate(dueDate.getDate() + borrowDays.value)
+  return dueDate.toLocaleDateString()
 }
 
 const returnBook = async (book: any) => {
   try {
-    // In a real app, this would update the loan record
-    await api.put(`/loans/return/${book.id}`)
-    book.available = true
+    // Find the active loan for this book
+    if (book.loans && book.loans.length > 0) {
+      const activeLoan = book.loans.find((loan: any) => !loan.returnedAt)
+      if (activeLoan) {
+        await api.patch(`/loans/${activeLoan.id}/return`)
+        
+        // Update book status in local state
+        const bookIndex = books.value.findIndex(b => b.id === book.id)
+        if (bookIndex !== -1) {
+          books.value[bookIndex].status = 'AVAILABLE'
+        }
+        
+        alert('Book returned successfully!')
+        return
+      }
+    }
+    
+    // Fallback: just update local state
+    const bookIndex = books.value.findIndex(b => b.id === book.id)
+    if (bookIndex !== -1) {
+      books.value[bookIndex].status = 'AVAILABLE'
+    }
   } catch (err) {
     console.error('Failed to return book:', err)
-    // For demo purposes, just update the local state
-    book.available = true
+    alert('Failed to return book. Please try again.')
   }
+}
+
+const canUserReturn = (book: any) => {
+  // For demo purposes, use the hardcoded admin user ID
+  const currentUserId = '97e44342-8611-42f7-8354-82e16a669fb8'
+  
+  // Check if the current user is the borrower or an admin
+  if (book.loans && book.loans.length > 0) {
+    const activeLoan = book.loans.find((loan: any) => !loan.returnedAt)
+    if (activeLoan) {
+      return activeLoan.borrowerId === currentUserId || true // Admin can return any book
+    }
+  }
+  return false
 }
 
 const formatDate = (dateString: string) => {

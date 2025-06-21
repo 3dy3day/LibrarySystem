@@ -8,14 +8,19 @@ generator client {
 }
 
 model User {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  email     String  @unique
+  email     String   @unique
+  role      UserRole @default(USER)
+  tier      UserTier @default(TIER_4)
   createdAt DateTime @default(now())
 
   loans     Loan[]
+  ownedBooks Book[]
 
   @@index([name])
+  @@index([email])
+  @@index([role])
 }
 
 model Book {
@@ -31,6 +36,7 @@ model Book {
   description String?
   thumbnail   String?
   ownerId     String?
+  owner       User?    @relation(fields: [ownerId], references: [id])
   createdAt   DateTime  @default(now())
 
   loans       Loan[]
@@ -38,6 +44,7 @@ model Book {
   @@index([title])
   @@index([author])
   @@index([status])
+  @@index([ownerId])
   @@index([title, author])
 }
 
@@ -63,4 +70,16 @@ enum BookStatus {
   AVAILABLE
   LENT
   LOST
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserTier {
+  TIER_1  // 3000 yen - can borrow 3 books
+  TIER_2  // 1000 yen - can borrow 3 books  
+  TIER_3  // 500 yen - can borrow 2 books
+  TIER_4  // default - can borrow 1 book
 }

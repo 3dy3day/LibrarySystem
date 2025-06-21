@@ -13,8 +13,8 @@ export const usersRouter = Router();
 usersRouter
   .get('/', validateQuery(userQuerySchema), async (req, res, next) => {
     try {
-      const { q } = req.query as any;
-      res.json(await UserService.list(q));
+      const { q, role, tier } = req.query as any;
+      res.json(await UserService.list(q, role, tier));
     } catch (e) { next(e); }
   })
   .get('/:id', validateParams(userParamsSchema), async (req, res, next) => {
@@ -36,5 +36,15 @@ usersRouter
     try {
       await UserService.remove(req.params.id);
       res.status(204).end();
+    } catch (e) { next(e); }
+  })
+  .get('/:id/borrow-status', validateParams(userParamsSchema), async (req, res, next) => {
+    try {
+      res.json(await UserService.canBorrow(req.params.id));
+    } catch (e) { next(e); }
+  })
+  .get('/:id/owned-books', validateParams(userParamsSchema), async (req, res, next) => {
+    try {
+      res.json(await UserService.getOwnedBooks(req.params.id));
     } catch (e) { next(e); }
   });

@@ -136,6 +136,13 @@ async function deleteBook() {
                   </span>
                 </div>
                 
+                <div class="flex flex-col sm:flex-row sm:items-center">
+                  <span class="font-medium text-gray-700 w-24">Owner:</span>
+                  <span class="text-gray-900">
+                    {{ book.owner?.name || 'Admin' }}
+                  </span>
+                </div>
+                
                 <div v-if="book.createdAt" class="flex flex-col sm:flex-row sm:items-center">
                   <span class="font-medium text-gray-700 w-24">Added:</span>
                   <span class="text-gray-900">{{ new Date(book.createdAt).toLocaleDateString() }}</span>

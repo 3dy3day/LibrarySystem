@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createLoanSchema = z.object({
   bookId: z.string().uuid('Invalid book ID format'),
   borrowerId: z.string().uuid('Invalid borrower ID format'),
-  days: z.number().int().min(1).max(365).optional().default(14)
+  days: z.number().int().min(1).max(14).optional().default(14)
 });
 
 export const loanQuerySchema = z.object({

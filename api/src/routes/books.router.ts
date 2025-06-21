@@ -14,8 +14,8 @@ export const booksRouter = Router();
 booksRouter
   .get('/', validateQuery(bookQuerySchema), async (req, res, next) => {
     try {
-      const { q, status, author } = req.query as any;
-      res.json(await BookService.list(q, status, author));
+      const { q, status, author, ownerId } = req.query as any;
+      res.json(await BookService.list(q, status, author, ownerId));
     } catch (e) { next(e); }
   })
   .get('/:id', validateParams(bookParamsSchema), async (req, res, next) => {

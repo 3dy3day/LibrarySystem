@@ -2,7 +2,7 @@ import { prisma, BookStatus } from '../lib/prisma';
 import { GoogleBooksService } from './googleBooks.service';
 
 export const BookService = {
-  list: (q?: string, status?: string, author?: string) =>
+  list: (q?: string, status?: string, author?: string, ownerId?: string) =>
     prisma.book.findMany({
         where: {
           ...(q && { 
@@ -13,13 +13,50 @@ export const BookService = {
             ]
           }),
           ...(status && { status: status as BookStatus }),
-          ...(author && { author: { contains: author } })
+          ...(author && { author: { contains: author } }),
+          ...(ownerId && { ownerId })
+        },
+        include: {
+          loans: {
+            where: { returnedAt: null },
+            include: {
+              borrower: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true
+                }
+              }
+            }
+          }
         }
     }),
-  get: (id: string) => prisma.book.findUnique({ where: { id } }),
-  create: (data: any) => prisma.book.create({ data }),
+  get: (id: string) => 
+    prisma.book.findUnique({ 
+      where: { id },
+      include: {
+        loans: {
+          include: {
+            borrower: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        }
+      }
+    }),
+  create: (data: any) => 
+    prisma.book.create({ 
+      data
+    }),
   update: (id: string, data: any) =>
-    prisma.book.update({ where: { id }, data }),
+    prisma.book.update({ 
+      where: { id }, 
+      data
+    }),
   remove: async (id: string) => {
     // Check if book has any loans
     const bookWithLoans = await prisma.book.findUnique({
@@ -66,7 +103,9 @@ export const BookService = {
     const googleBookData = await GoogleBooksService.fetchByIsbn(isbn);
     
     if (googleBookData) {
-      return await prisma.book.create({ data: googleBookData });
+      return await prisma.book.create({ 
+        data: googleBookData
+      });
     }
     
     return await prisma.book.create({

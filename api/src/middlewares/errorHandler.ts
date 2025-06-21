@@ -43,6 +43,13 @@ export function errorHandler(
     });
   }
 
+  if (error.message.includes('Cannot borrow more books')) {
+    return res.status(409).json({
+      error: 'Borrowing limit exceeded',
+      message: error.message
+    });
+  }
+
   if (error.message.includes('Book not found')) {
     return res.status(404).json({
       error: 'Book not found',

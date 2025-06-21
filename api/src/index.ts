@@ -1,32 +1,7 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-
 import { env } from './env';
-import { basicAuth } from './middlewares/basicAuth';
-import { healthRouter } from './controllers/health.controller';
+import { createApp } from './app';
 
-import { usersRouter } from './routes/users.router';
-import { booksRouter } from './routes/books.router';
-import { loansRouter } from './routes/loans.router';
-
-const app = express();
-
-
-app.use(cors());
-app.use(helmet());
-app.use(morgan('dev'));
-app.use(express.json());
-
-
-app.use(basicAuth);
-app.use(healthRouter);
-
-app.use('/users', usersRouter);
-app.use('/books', booksRouter);
-app.use('/loans', loansRouter);
-
+const app = createApp();
 
 const port = Number(env.PORT);
 app.listen(port, () => {
