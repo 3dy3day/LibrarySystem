@@ -1,32 +1,5 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Navigation Header -->
-    <nav class="bg-white shadow-sm border-b">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex items-center">
-            <router-link to="/" class="text-xl font-semibold text-gray-900 hover:text-gray-700">
-              Library System
-            </router-link>
-          </div>
-          <div class="flex items-center space-x-4">
-            <router-link 
-              to="/" 
-              class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-            >
-              Dashboard
-            </router-link>
-            <router-link 
-              to="/register" 
-              class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-            >
-              Register Book
-            </router-link>
-          </div>
-        </div>
-      </div>
-    </nav>
-
     <!-- Page Content -->
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       <!-- Page Header -->
@@ -143,10 +116,10 @@
           <div
             v-for="book in filteredBooks"
             :key="book.id"
-            class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+            class="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow cursor-pointer flex flex-col h-full"
             @click="viewBook(book)"
           >
-            <div class="p-6">
+            <div class="p-6 flex-1 flex flex-col">
               <!-- Book Cover -->
               <div class="w-full h-48 bg-gray-200 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                 <img 
@@ -161,12 +134,18 @@
               </div>
 
               <!-- Book Info -->
-              <div>
-                <h3 class="text-lg font-medium text-gray-900 mb-2 line-clamp-2">{{ book.title }}</h3>
+              <div class="flex-1 flex flex-col">
+                <h3 
+                  class="text-lg font-medium text-gray-900 mb-2 leading-tight"
+                  :class="book.title && book.title.length > 50 ? 'line-clamp-3' : 'line-clamp-2'"
+                  :title="book.title"
+                >
+                  {{ book.title }}
+                </h3>
                 <p class="text-sm text-gray-600 mb-2">by {{ book.author || 'Unknown Author' }}</p>
                 
                 <!-- Status Badge -->
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between mb-3">
                   <span 
                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                     :class="book.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
@@ -181,16 +160,16 @@
                 </div>
 
                 <!-- Publication Info -->
-                <div class="mt-3 text-xs text-gray-500">
+                <div class="mt-auto text-xs text-gray-500">
                   <p v-if="book.publisher">{{ book.publisher }}</p>
                   <p v-if="book.publishedDate">{{ formatDate(book.publishedDate) }}</p>
                 </div>
               </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
-              <div class="flex justify-between items-center">
+            <!-- Action Buttons - Always at bottom -->
+            <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 mt-auto">
+              <div class="flex justify-between items-center min-h-[2rem]">
                 <button
                   @click.stop="viewBook(book)"
                   class="text-blue-600 hover:text-blue-800 text-sm font-medium"
@@ -205,7 +184,7 @@
                   >
                     Borrow
                   </button>
-                  <div v-else class="text-xs text-gray-600">
+                  <div v-else class="text-xs text-gray-600 text-right">
                     <div v-if="book.loans && book.loans.length > 0">
                       <p class="font-medium">Due: {{ formatDate(book.loans[0].dueAt) }}</p>
                       <p>Borrowed by: {{ book.loans[0].borrower?.name || 'Unknown' }}</p>
@@ -605,6 +584,13 @@ onMounted(() => {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

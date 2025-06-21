@@ -13,7 +13,6 @@
           <router-link to="/" class="nav-link">Dashboard</router-link>
           <router-link to="/books" class="nav-link">Books</router-link>
           <router-link to="/register" class="nav-link">Register Book</router-link>
-          <router-link to="/scan" class="nav-link">Scan</router-link>
         </nav>
         
         <div class="user-menu">
@@ -90,6 +89,7 @@ onUnmounted(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .app-header {
@@ -243,6 +243,7 @@ onUnmounted(() => {
 
 main {
   flex: 1;
+  overflow-x: hidden;
 }
 
 main.with-header {
