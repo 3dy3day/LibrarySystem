@@ -186,12 +186,10 @@
                   </button>
                   <div v-else class="text-xs text-gray-600 text-right">
                     <div v-if="book.loans && book.loans.length > 0">
-                      <p class="font-medium">Due: {{ formatDate(book.loans[0].dueAt) }}</p>
-                      <p>Borrowed by: {{ book.loans[0].borrower?.name || 'Unknown' }}</p>
                       <button
                         v-if="canUserReturn(book)"
                         @click.stop="returnBook(book)"
-                        class="mt-1 text-orange-600 hover:text-orange-800 text-sm font-medium"
+                        class="text-orange-600 hover:text-orange-800 text-sm font-medium"
                       >
                         Return
                       </button>
@@ -460,8 +458,8 @@ const viewBook = (book: any) => {
 const borrowBook = async (book: any) => {
   selectedBook.value = book
   
-  // Use admin user ID for demo (since auth store doesn't have current user)
-  const currentUserId = '97e44342-8611-42f7-8354-82e16a669fb8' // Admin user ID
+  // Get current logged-in user ID
+  const currentUserId = authStore.getUserId
   
   // Get current user info and borrowing limits
   try {
@@ -531,7 +529,10 @@ const returnBook = async (book: any) => {
     if (book.loans && book.loans.length > 0) {
       const activeLoan = book.loans.find((loan: any) => !loan.returnedAt)
       if (activeLoan) {
-        await api.patch(`/loans/${activeLoan.id}/return`)
+        const currentUserId = authStore.getUserId
+        await api.patch(`/loans/${activeLoan.id}/return`, {
+          userId: currentUserId
+        })
         
         // Update book status in local state
         const bookIndex = books.value.findIndex(b => b.id === book.id)
@@ -549,21 +550,24 @@ const returnBook = async (book: any) => {
     if (bookIndex !== -1) {
       books.value[bookIndex].status = 'AVAILABLE'
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to return book:', err)
-    alert('Failed to return book. Please try again.')
+    const errorMessage = err.response?.data?.message || 'Failed to return book. Please try again.'
+    alert(errorMessage)
   }
 }
 
 const canUserReturn = (book: any) => {
-  // For demo purposes, use the hardcoded admin user ID
-  const currentUserId = '97e44342-8611-42f7-8354-82e16a669fb8'
+  // Get current logged-in user ID
+  const currentUserId = authStore.getUserId
+  const isAdmin = authStore.getUserRole === 'ADMIN'
   
   // Check if the current user is the borrower or an admin
   if (book.loans && book.loans.length > 0) {
     const activeLoan = book.loans.find((loan: any) => !loan.returnedAt)
     if (activeLoan) {
-      return activeLoan.borrowerId === currentUserId || true // Admin can return any book
+      // Only the borrower or admin can return the book
+      return activeLoan.borrowerId === currentUserId || isAdmin
     }
   }
   return false
@@ -586,6 +590,9 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  word-wrap: break-word;
+  hyphens: auto;
 }
 
 .line-clamp-3 {
@@ -593,5 +600,27 @@ onMounted(() => {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Fallback for browsers that don't support -webkit-line-clamp */
+@supports not (-webkit-line-clamp: 2) {
+  .line-clamp-2 {
+    display: block;
+    max-height: 3em; /* Approximate height for 2 lines */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .line-clamp-3 {
+    display: block;
+    max-height: 4.5em; /* Approximate height for 3 lines */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 </style>

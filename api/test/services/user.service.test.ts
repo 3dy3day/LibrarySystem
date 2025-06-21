@@ -1,20 +1,27 @@
 import { UserService } from '../../src/services/user.service';
 
-jest.mock('../../src/lib/prisma');
+// Mock the entire prisma module
+jest.mock('../../src/lib/prisma', () => ({
+  prisma: {
+    user: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+  },
+}));
 
+// Import after mocking
 import { prisma } from '../../src/lib/prisma';
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>;
-
-beforeAll(() => {
-  mockPrisma.user = {
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  } as any;
-});
+// Create typed mock functions
+const mockFindMany = prisma.user.findMany as jest.MockedFunction<typeof prisma.user.findMany>;
+const mockFindUnique = prisma.user.findUnique as jest.MockedFunction<typeof prisma.user.findUnique>;
+const mockCreate = prisma.user.create as jest.MockedFunction<typeof prisma.user.create>;
+const mockUpdate = prisma.user.update as jest.MockedFunction<typeof prisma.user.update>;
+const mockDelete = prisma.user.delete as jest.MockedFunction<typeof prisma.user.delete>;
 
 describe('UserService', () => {
   beforeEach(() => {
@@ -27,27 +34,12 @@ describe('UserService', () => {
         { id: '1', name: 'John Doe', email: 'john@example.com' },
         { id: '2', name: 'Jane Smith', email: 'jane@example.com' },
       ];
-      mockPrisma.user.findMany.mockResolvedValue(mockUsers as any);
+      mockFindMany.mockResolvedValue(mockUsers as any);
 
       const result = await UserService.list();
 
-      expect(mockPrisma.user.findMany).toHaveBeenCalledWith({
-        where: undefined,
-      });
-      expect(result).toEqual(mockUsers);
-    });
-
-    it('should return all users without filtering', async () => {
-      const mockUsers = [
-        { id: '1', name: 'John Doe', email: 'john@example.com' },
-        { id: '2', name: 'Jane Smith', email: 'jane@example.com' },
-      ];
-      mockPrisma.user.findMany.mockResolvedValue(mockUsers as any);
-
-      const result = await UserService.list();
-
-      expect(mockPrisma.user.findMany).toHaveBeenCalledWith({
-        where: undefined,
+      expect(mockFindMany).toHaveBeenCalledWith({
+        where: {},
       });
       expect(result).toEqual(mockUsers);
     });
@@ -56,11 +48,11 @@ describe('UserService', () => {
       const mockUsers = [
         { id: '1', name: 'John Doe', email: 'john@example.com' },
       ];
-      mockPrisma.user.findMany.mockResolvedValue(mockUsers as any);
+      mockFindMany.mockResolvedValue(mockUsers as any);
 
       const result = await UserService.list('John');
 
-      expect(mockPrisma.user.findMany).toHaveBeenCalledWith({
+      expect(mockFindMany).toHaveBeenCalledWith({
         where: {
           OR: [
             { name: { contains: 'John' } },
@@ -75,12 +67,27 @@ describe('UserService', () => {
   describe('get', () => {
     it('should return a user by id', async () => {
       const mockUser = { id: '1', name: 'John Doe', email: 'john@example.com' };
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser as any);
+      mockFindUnique.mockResolvedValue(mockUser as any);
 
       const result = await UserService.get('1');
 
-      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      expect(mockFindUnique).toHaveBeenCalledWith({
         where: { id: '1' },
+        include: {
+          loans: {
+            where: { returnedAt: null },
+            include: {
+              book: {
+                select: {
+                  id: true,
+                  title: true,
+                  author: true,
+                  thumbnail: true
+                }
+              }
+            }
+          }
+        }
       });
       expect(result).toEqual(mockUser);
     });
@@ -90,11 +97,11 @@ describe('UserService', () => {
     it('should create a new user', async () => {
       const userData = { name: 'John Doe', email: 'john@example.com' };
       const mockUser = { id: '1', ...userData };
-      mockPrisma.user.create.mockResolvedValue(mockUser as any);
+      mockCreate.mockResolvedValue(mockUser as any);
 
       const result = await UserService.create(userData);
 
-      expect(mockPrisma.user.create).toHaveBeenCalledWith({
+      expect(mockCreate).toHaveBeenCalledWith({
         data: userData,
       });
       expect(result).toEqual(mockUser);
@@ -105,11 +112,11 @@ describe('UserService', () => {
     it('should update a user', async () => {
       const updateData = { name: 'John Updated' };
       const mockUser = { id: '1', name: 'John Updated', email: 'john@example.com' };
-      mockPrisma.user.update.mockResolvedValue(mockUser as any);
+      mockUpdate.mockResolvedValue(mockUser as any);
 
       const result = await UserService.update('1', updateData);
 
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      expect(mockUpdate).toHaveBeenCalledWith({
         where: { id: '1' },
         data: updateData,
       });
@@ -120,11 +127,11 @@ describe('UserService', () => {
   describe('remove', () => {
     it('should delete a user', async () => {
       const mockUser = { id: '1', name: 'John Doe', email: 'john@example.com' };
-      mockPrisma.user.delete.mockResolvedValue(mockUser as any);
+      mockDelete.mockResolvedValue(mockUser as any);
 
       const result = await UserService.remove('1');
 
-      expect(mockPrisma.user.delete).toHaveBeenCalledWith({
+      expect(mockDelete).toHaveBeenCalledWith({
         where: { id: '1' },
       });
       expect(result).toEqual(mockUser);

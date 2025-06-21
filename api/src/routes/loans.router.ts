@@ -30,7 +30,8 @@ loansRouter
   })
   .patch('/:id/return', validateParams(loanParamsSchema), async (req, res, next) => {
     try {
-      const loan = await LoanService.returnLoan(req.params.id);
+      const userId = req.body.userId || req.headers['user-id'] as string;
+      const loan = await LoanService.returnLoan(req.params.id, userId);
       res.json(loan);
     } catch (e) { next(e); }
   });

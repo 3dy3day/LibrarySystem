@@ -35,7 +35,15 @@ export const BookService = {
     prisma.book.findUnique({ 
       where: { id },
       include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
         loans: {
+          where: { returnedAt: null },
           include: {
             borrower: {
               select: {
@@ -72,7 +80,7 @@ export const BookService = {
     const activeLoans = bookWithLoans.loans.filter(loan => !loan.returnedAt);
     
     if (activeLoans.length > 0) {
-      throw new Error('Cannot delete book with active loans. Please return the book first.');
+      throw new Error('Cannot delete book with active rentals. Please return the book first.');
     }
 
     // If book has historical loans (returned), delete them first

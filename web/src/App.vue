@@ -9,9 +9,27 @@
           </router-link>
         </div>
         
+        <div class="search-container">
+          <div class="search-box">
+            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <input 
+              v-model="searchQuery"
+              @keyup.enter="performSearch"
+              type="text" 
+              placeholder="Search books by title, author, or ISBN..."
+              class="search-input"
+            />
+            <button v-if="searchQuery" @click="clearSearch" class="clear-search">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
         <nav class="nav-menu">
-          <router-link to="/" class="nav-link">Dashboard</router-link>
-          <router-link to="/books" class="nav-link">Books</router-link>
           <router-link to="/register" class="nav-link">Register Book</router-link>
         </nav>
         
@@ -52,6 +70,7 @@ import { useAuthStore } from './stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 const showUserMenu = ref(false)
+const searchQuery = ref('')
 
 const getUserInitials = (name: string): string => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase()
@@ -65,6 +84,16 @@ const handleLogout = () => {
   authStore.logout()
   showUserMenu.value = false
   router.push('/login')
+}
+
+const performSearch = () => {
+  if (searchQuery.value.trim()) {
+    router.push(`/books?search=${encodeURIComponent(searchQuery.value.trim())}`)
+  }
+}
+
+const clearSearch = () => {
+  searchQuery.value = ''
 }
 
 // Close user menu when clicking outside
@@ -124,6 +153,74 @@ onUnmounted(() => {
 
 .logo-link:hover {
   color: #667eea;
+}
+
+.search-container {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 20px;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  width: 20px;
+  height: 20px;
+  color: #666;
+  z-index: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #f8f9fa;
+  transition: all 0.3s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.clear-search {
+  position: absolute;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.clear-search:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.clear-search svg {
+  width: 16px;
+  height: 16px;
 }
 
 .nav-menu {
@@ -254,6 +351,20 @@ main.with-header {
 @media (max-width: 768px) {
   .header-content {
     padding: 0 15px;
+  }
+  
+  .search-container {
+    margin: 0 10px;
+    max-width: 200px;
+  }
+  
+  .search-input {
+    font-size: 13px;
+    padding: 8px 10px 8px 35px;
+  }
+  
+  .search-input::placeholder {
+    font-size: 13px;
   }
   
   .nav-menu {

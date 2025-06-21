@@ -10,10 +10,10 @@ export const LoanService = {
       if (!book || book.status !== BookStatus.AVAILABLE)
         throw new Error('Book not available');
 
-      // Check if user can borrow more books based on their tier
+      // Check if user can borrow more books based on their tier and overdue status
       const borrowLimit = await UserService.canBorrow(borrowerId);
       if (!borrowLimit.canBorrow) {
-        throw new Error(`Cannot borrow more books. Current loans: ${borrowLimit.currentLoans}/${borrowLimit.maxLoans}`);
+        throw new Error(borrowLimit.reason || 'Cannot borrow more books');
       }
 
       const dueAt = new Date(Date.now() + days * 86400_000);
@@ -29,8 +29,37 @@ export const LoanService = {
   },
 
 
-  async returnLoan(loanId: string) {
+  async returnLoan(loanId: string, userId?: string) {
     return prisma.$transaction(async (tx) => {
+      // First get the loan with borrower and book owner info
+      const existingLoan = await tx.loan.findUnique({
+        where: { id: loanId },
+        include: {
+          borrower: true,
+          book: {
+            include: {
+              owner: true
+            }
+          }
+        }
+      });
+
+      if (!existingLoan) {
+        throw new Error('Rental not found');
+      }
+
+      // Check permissions: only admin, book owner, or borrower can return
+      if (userId) {
+        const user = await tx.user.findUnique({ where: { id: userId } });
+        const isAdmin = user?.role === 'ADMIN';
+        const isBorrower = existingLoan.borrowerId === userId;
+        const isOwner = existingLoan.book.ownerId === userId;
+
+        if (!isAdmin && !isBorrower && !isOwner) {
+          throw new Error('You do not have permission to return this book');
+        }
+      }
+
       const loan = await tx.loan.update({
         where: { id: loanId },
         data: { returnedAt: new Date() }

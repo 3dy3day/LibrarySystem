@@ -23,14 +23,52 @@
     </div>
 
     <div class="user-content">
-      <!-- Borrowed Books Section -->
+      <!-- Borrowing Status - Now at the top -->
+      <div class="section">
+        <h2>📊 Borrowing Status</h2>
+        <div class="status-card">
+          <div class="status-item">
+            <span class="status-label">Current Rentals:</span>
+            <span class="status-value">{{ borrowStatus.currentLoans }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Max Allowed:</span>
+            <span class="status-value">{{ borrowStatus.maxLoans === -1 ? 'Unlimited' : borrowStatus.maxLoans }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Can Borrow:</span>
+            <span class="status-value" :class="borrowStatus.canBorrow ? 'success' : 'error'">
+              {{ borrowStatus.canBorrow ? 'Yes' : 'No' }}
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Overdue Books:</span>
+            <span class="status-value" :class="borrowStatus.overdueCount > 0 ? 'error' : 'success'">
+              {{ borrowStatus.overdueCount || 0 }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- Penalty Warning -->
+        <div v-if="borrowStatus.hasOverdueBooks" class="penalty-warning">
+          <div class="warning-icon">⚠️</div>
+          <div class="warning-content">
+            <h3>Borrowing Suspended</h3>
+            <p>{{ borrowStatus.reason }}</p>
+            <p class="warning-note">Please return your overdue books to resume borrowing privileges.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Currently Borrowed Books - Books you borrowed from others -->
       <div class="section">
         <h2>📚 Currently Borrowed Books</h2>
+        <p class="section-description">Books you have borrowed from other users</p>
         <div v-if="borrowedBooks.length === 0" class="empty-state">
           <p>No books currently borrowed</p>
         </div>
         <div v-else class="books-grid">
-          <div v-for="loan in borrowedBooks" :key="loan.id" class="book-card borrowed">
+          <div v-for="loan in borrowedBooks" :key="loan.id" class="book-card borrowed" :class="{ 'overdue': isOverdue(loan.dueAt) }">
             <div class="book-thumbnail">
               <img v-if="loan.book.thumbnail" :src="loan.book.thumbnail" :alt="loan.book.title" />
               <div v-else class="placeholder-thumbnail">📖</div>
@@ -38,16 +76,22 @@
             <div class="book-info">
               <h3>{{ loan.book.title }}</h3>
               <p class="author">by {{ loan.book.author }}</p>
-              <p class="due-date">Due: {{ formatDate(loan.dueAt) }}</p>
-              <span class="status-badge borrowed">Borrowed</span>
+              <p class="due-date" :class="{ 'overdue-text': isOverdue(loan.dueAt) }">
+                Due: {{ formatDate(loan.dueAt) }}
+                <span v-if="isOverdue(loan.dueAt)" class="overdue-label">OVERDUE</span>
+              </p>
+              <span class="status-badge" :class="isOverdue(loan.dueAt) ? 'overdue' : 'borrowed'">
+                {{ isOverdue(loan.dueAt) ? 'Overdue' : 'Borrowed' }}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Owned Books Section -->
+      <!-- Owned Books Section - Books you own (shows if borrowed by others) -->
       <div class="section">
         <h2>📖 Books I Own</h2>
+        <p class="section-description">Books you have registered in the system</p>
         <div v-if="ownedBooks.length === 0" class="empty-state">
           <p>No books registered yet</p>
           <router-link to="/register" class="add-book-btn">
@@ -66,35 +110,11 @@
               <span class="status-badge" :class="book.status.toLowerCase()">
                 {{ book.status }}
               </span>
-              <div v-if="book.loans && book.loans.length > 0" class="loan-info">
-                <p class="borrower">Borrowed by: {{ book.loans[0].borrower.name }}</p>
-              </div>
             </div>
             <div class="book-actions">
               <router-link :to="`/books/${book.id}`" class="view-btn">View</router-link>
               <router-link :to="`/books/${book.id}/edit`" class="edit-btn">Edit</router-link>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Borrowing Status -->
-      <div class="section">
-        <h2>📊 Borrowing Status</h2>
-        <div class="status-card">
-          <div class="status-item">
-            <span class="status-label">Current Loans:</span>
-            <span class="status-value">{{ borrowStatus.currentLoans }}</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Max Allowed:</span>
-            <span class="status-value">{{ borrowStatus.maxLoans }}</span>
-          </div>
-          <div class="status-item">
-            <span class="status-label">Can Borrow:</span>
-            <span class="status-value" :class="borrowStatus.canBorrow ? 'success' : 'error'">
-              {{ borrowStatus.canBorrow ? 'Yes' : 'No' }}
-            </span>
           </div>
         </div>
       </div>
@@ -135,6 +155,9 @@ interface BorrowStatus {
   canBorrow: boolean
   currentLoans: number
   maxLoans: number
+  hasOverdueBooks: boolean
+  overdueCount: number
+  reason?: string
 }
 
 const authStore = useAuthStore()
@@ -144,7 +167,9 @@ const ownedBooks = ref<Book[]>([])
 const borrowStatus = ref<BorrowStatus>({
   canBorrow: false,
   currentLoans: 0,
-  maxLoans: 1
+  maxLoans: 1,
+  hasOverdueBooks: false,
+  overdueCount: 0
 })
 
 const getUserInitials = (name: string): string => {
@@ -163,6 +188,10 @@ const getBorrowLimit = (tier: string): number => {
 
 const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleDateString()
+}
+
+const isOverdue = (dueDate: string): boolean => {
+  return new Date(dueDate) < new Date()
 }
 
 const fetchUserData = async () => {
@@ -274,9 +303,16 @@ onMounted(() => {
 }
 
 .section h2 {
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   color: #333;
   font-size: 1.5rem;
+}
+
+.section-description {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
 .empty-state {
@@ -329,6 +365,11 @@ onMounted(() => {
   border-left: 4px solid #667eea;
 }
 
+.book-card.overdue {
+  border-left: 4px solid #ff6b6b;
+  background: #fff5f5;
+}
+
 .book-thumbnail {
   width: 60px;
   height: 80px;
@@ -357,6 +398,12 @@ onMounted(() => {
   margin: 0 0 5px 0;
   font-size: 1.1rem;
   color: #333;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .book-info .author {
@@ -394,16 +441,24 @@ onMounted(() => {
   color: #333;
 }
 
-.loan-info {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
+.status-badge.overdue {
+  background: #ff6b6b;
+  color: white;
 }
 
-.borrower {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #666;
+.due-date.overdue-text {
+  color: #c53030;
+  font-weight: 600;
+}
+
+.overdue-label {
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: #ff6b6b;
+  color: white;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .book-actions {
@@ -471,5 +526,39 @@ onMounted(() => {
 
 .status-value.error {
   color: #ff6b6b;
+}
+
+.penalty-warning {
+  margin-top: 20px;
+  background: #fff5f5;
+  border: 1px solid #fed7d7;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.warning-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.warning-content h3 {
+  margin: 0 0 10px 0;
+  color: #c53030;
+  font-size: 1.2rem;
+}
+
+.warning-content p {
+  margin: 0 0 8px 0;
+  color: #742a2a;
+  line-height: 1.5;
+}
+
+.warning-note {
+  font-style: italic;
+  color: #a0aec0;
+  font-size: 0.9rem;
 }
 </style>

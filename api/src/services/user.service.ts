@@ -18,7 +18,22 @@ export const UserService = {
   
   get: (id: string) => 
     prisma.user.findUnique({ 
-      where: { id }
+      where: { id },
+      include: {
+        loans: {
+          where: { returnedAt: null },
+          include: {
+            book: {
+              select: {
+                id: true,
+                title: true,
+                author: true,
+                thumbnail: true
+              }
+            }
+          }
+        }
+      }
     }),
   
   create: (data: { 
@@ -43,8 +58,15 @@ export const UserService = {
   
   remove: (id: string) => prisma.user.delete({ where: { id } }),
 
-  // Check if user can borrow more books based on their tier
-  async canBorrow(userId: string): Promise<{ canBorrow: boolean; currentLoans: number; maxLoans: number }> {
+  // Check if user can borrow more books based on their tier and overdue status
+  async canBorrow(userId: string): Promise<{ 
+    canBorrow: boolean; 
+    currentLoans: number; 
+    maxLoans: number; 
+    hasOverdueBooks: boolean;
+    overdueCount: number;
+    reason?: string;
+  }> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -59,22 +81,67 @@ export const UserService = {
     }
 
     const currentLoans = user.loans.length;
+    const now = new Date();
     
-    // Admin users have no borrowing limits
+    // Check for overdue books
+    const overdueLoans = user.loans.filter(loan => loan.dueAt < now);
+    const hasOverdueBooks = overdueLoans.length > 0;
+    const overdueCount = overdueLoans.length;
+    
+    // Admin users have no borrowing limits but still can't borrow with overdue books
     if ((user as any).role === 'ADMIN') {
+      if (hasOverdueBooks) {
+        return {
+          canBorrow: false,
+          currentLoans,
+          maxLoans: -1,
+          hasOverdueBooks,
+          overdueCount,
+          reason: `Cannot borrow new books. You have ${overdueCount} overdue book${overdueCount > 1 ? 's' : ''} that must be returned first.`
+        };
+      }
+      
       return {
         canBorrow: true,
         currentLoans,
-        maxLoans: -1 // -1 indicates unlimited
+        maxLoans: -1, // -1 indicates unlimited
+        hasOverdueBooks,
+        overdueCount
       };
     }
 
     const maxLoans = getBorrowLimit((user as any).tier);
 
+    // Check if user has overdue books (penalty feature)
+    if (hasOverdueBooks) {
+      return {
+        canBorrow: false,
+        currentLoans,
+        maxLoans,
+        hasOverdueBooks,
+        overdueCount,
+        reason: `Cannot borrow new books. You have ${overdueCount} overdue book${overdueCount > 1 ? 's' : ''} that must be returned first.`
+      };
+    }
+
+    // Check if user has reached borrowing limit
+    if (currentLoans >= maxLoans) {
+      return {
+        canBorrow: false,
+        currentLoans,
+        maxLoans,
+        hasOverdueBooks,
+        overdueCount,
+        reason: `Cannot borrow more books. Current rentals: ${currentLoans}/${maxLoans}`
+      };
+    }
+
     return {
-      canBorrow: currentLoans < maxLoans,
+      canBorrow: true,
       currentLoans,
-      maxLoans
+      maxLoans,
+      hasOverdueBooks,
+      overdueCount
     };
   },
 
